@@ -23,8 +23,22 @@ Route::get('/health', function () {
 // Auth routes (public)
 // -------------------------------------------------------------------------
 Route::prefix('auth')->group(function () {
+    // Registration
     Route::post('/register/professional', [AuthController::class, 'registerProfessional']);
     Route::post('/register/brand',        [AuthController::class, 'registerBrand']);
+
+    // Login
+    Route::post('/login', [AuthController::class, 'login']);
+
+    // Brand URL availability check
+    Route::get('/check-url', [AuthController::class, 'checkBrandUrl']);
+
+    // Protected auth routes
+    Route::middleware('auth:api')->group(function () {
+        Route::post('/logout',  [AuthController::class, 'logout']);
+        Route::post('/refresh', [AuthController::class, 'refresh']);
+        Route::get('/me',       [AuthController::class, 'me']);
+    });
 });
 
 // -------------------------------------------------------------------------
