@@ -18,7 +18,7 @@ Route::get('/health', function () {
     ]);
 });
 
-// Authenticated user route (Sanctum protected)
+// Authenticated user route (JWT protected)
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth:api');
