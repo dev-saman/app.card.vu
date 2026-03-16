@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,7 +19,19 @@ Route::get('/health', function () {
     ]);
 });
 
-// Authenticated user route (JWT protected)
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:api');
+// -------------------------------------------------------------------------
+// Auth routes (public)
+// -------------------------------------------------------------------------
+Route::prefix('auth')->group(function () {
+    Route::post('/register/professional', [AuthController::class, 'registerProfessional']);
+    Route::post('/register/brand',        [AuthController::class, 'registerBrand']);
+});
+
+// -------------------------------------------------------------------------
+// Protected routes (JWT required)
+// -------------------------------------------------------------------------
+Route::middleware('auth:api')->group(function () {
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+});
