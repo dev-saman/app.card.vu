@@ -47,30 +47,47 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = User::create([
-            'name'              => $request->name,
-            'email'             => $request->email,
-            'mobile_number'     => $request->mobile_number,
-            'password'          => $request->password,
-            'registration_type' => 'professional',
-            'status'            => 1,
-            'timezone'          => $request->timezone,
-            'country'           => $request->country,
-            'profile_picture'   => $request->profile_picture,
-        ]);
+        DB::beginTransaction();
 
-        $token = auth('api')->login($user);
-        $this->storeSession($user, $token, $request);
+        try {
+            // 1. Create user account
+            $user = User::create([
+                'name'              => $request->name,
+                'email'             => $request->email,
+                'mobile_number'     => $request->mobile_number,
+                'password'          => $request->password,
+                'registration_type' => 'professional',
+                'status'            => 1,
+                'timezone'          => $request->timezone,
+                'country'           => $request->country,
+                'profile_picture'   => $request->profile_picture,
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Professional account created successfully.',
-            'data'    => [
-                'token'      => $token,
-                'token_type' => 'Bearer',
-                'expires_in' => auth('api')->factory()->getTTL() * 60,
-            ],
-        ], 201);
+            // 2. Issue JWT and store session
+            $token = auth('api')->login($user);
+            $this->storeSession($user, $token, $request);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Professional account created successfully.',
+                'data'    => [
+                    'token'      => $token,
+                    'token_type' => 'Bearer',
+                    'expires_in' => auth('api')->factory()->getTTL() * 60,
+                ],
+            ], 201);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration failed. Please try again.',
+                'error'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -314,17 +331,25 @@ class AuthController extends Controller
     // -------------------------------------------------------------------------
     public function refresh(Request $request): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
             $oldToken = $request->bearerToken();
+
+            // 1. Rotate the JWT
             $newToken = auth('api')->refresh();
 
+            // 2. Revoke the old session record
             if ($oldToken) {
                 JwtSession::where('token_hash', hash('sha256', $oldToken))
                     ->update(['is_active' => 0, 'revoked_at' => now()]);
             }
 
+            // 3. Store the new session record
             $user = auth('api')->user();
             $this->storeSession($user, $newToken, $request);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -335,10 +360,14 @@ class AuthController extends Controller
                     'expires_in' => auth('api')->factory()->getTTL() * 60,
                 ],
             ]);
+
         } catch (\Throwable $e) {
+            DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Token refresh failed.',
+                'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 401);
         }
     }
