@@ -50,7 +50,7 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
-            'status'            => 'string',
+            'status'            => 'boolean',
             'registration_type' => 'string',
         ];
     }
