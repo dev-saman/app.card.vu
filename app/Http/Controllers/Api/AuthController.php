@@ -66,7 +66,6 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Professional account created successfully.',
             'data'    => [
-                'user'       => $this->userResource($user),
                 'token'      => $token,
                 'token_type' => 'Bearer',
                 'expires_in' => auth('api')->factory()->getTTL() * 60,
@@ -187,9 +186,6 @@ class AuthController extends Controller
                 'success' => true,
                 'message' => 'Brand account created successfully.',
                 'data'    => [
-                    'user'       => $this->userResource($user),
-                    'workspace'  => $this->workspaceResource($workspace),
-                    'brand'      => $this->brandResource($brand),
                     'token'      => $token,
                     'token_type' => 'Bearer',
                     'expires_in' => auth('api')->factory()->getTTL() * 60,
@@ -251,29 +247,14 @@ class AuthController extends Controller
 
         $this->storeSession($user, $token, $request);
 
-        $data = [
-            'user'       => $this->userResource($user),
-            'token'      => $token,
-            'token_type' => 'Bearer',
-            'expires_in' => auth('api')->factory()->getTTL() * 60,
-        ];
-
-        // If the user is a brand type, also return their workspace and first brand
-        if ($user->registration_type === 'brand') {
-            $workspace = Workspace::where('user_id', $user->id)->first();
-            if ($workspace) {
-                $data['workspace'] = $this->workspaceResource($workspace);
-                $brand = Brand::where('workspace_id', $workspace->id)->first();
-                if ($brand) {
-                    $data['brand'] = $this->brandResource($brand);
-                }
-            }
-        }
-
         return response()->json([
             'success' => true,
             'message' => 'Login successful.',
-            'data'    => $data,
+            'data'    => [
+                'token'      => $token,
+                'token_type' => 'Bearer',
+                'expires_in' => auth('api')->factory()->getTTL() * 60,
+            ],
         ]);
     }
 
@@ -323,6 +304,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
+            'message' => 'User retrieved successfully.',
             'data'    => $data,
         ]);
     }
@@ -345,10 +327,13 @@ class AuthController extends Controller
             $this->storeSession($user, $newToken, $request);
 
             return response()->json([
-                'success'    => true,
-                'token'      => $newToken,
-                'token_type' => 'Bearer',
-                'expires_in' => auth('api')->factory()->getTTL() * 60,
+                'success' => true,
+                'message' => 'Token refreshed successfully.',
+                'data'    => [
+                    'token'      => $newToken,
+                    'token_type' => 'Bearer',
+                    'expires_in' => auth('api')->factory()->getTTL() * 60,
+                ],
             ]);
         } catch (\Throwable $e) {
             return response()->json([
