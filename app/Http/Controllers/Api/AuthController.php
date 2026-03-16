@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Brand;
+use App\Models\Category;
 use App\Models\JwtSession;
+use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +51,7 @@ class AuthController extends Controller
             'name'              => $request->name,
             'email'             => $request->email,
             'mobile_number'     => $request->mobile_number,
-            'password'          => $request->password, // auto-hashed by User model cast
+            'password'          => $request->password,
             'registration_type' => 'professional',
             'status'            => 1,
             'timezone'          => $request->timezone,
@@ -74,41 +76,53 @@ class AuthController extends Controller
 
     // -------------------------------------------------------------------------
     // POST /api/auth/register/brand
+    //
+    // Step 1 — Account:   name, email, mobile_number, password
+    // Step 2 — Workspace: workspace_name, owner_name, country, currency, timezone
+    // Step 3 — Brand:     brand_name, brand_url, brand_category
     // -------------------------------------------------------------------------
     public function registerBrand(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            // --- User account fields ---
+            // --- Step 1: User account ---
             'name'             => ['required', 'string', 'max:255'],
             'email'            => ['required', 'email', 'max:255', 'unique:users,email'],
             'mobile_number'    => ['required', 'string', 'max:20'],
             'password'         => ['required', 'string', 'min:8', 'confirmed'],
-            'timezone'         => ['nullable', 'string', 'max:100'],
-            'country'          => ['nullable', 'string', 'max:100'],
             'profile_picture'  => ['nullable', 'url', 'max:500'],
 
-            // --- Brand fields ---
+            // --- Step 2: Workspace ---
+            'workspace_name'   => ['required', 'string', 'max:255'],
+            'owner_name'       => ['required', 'string', 'max:255'],
+            'country'          => ['required', 'string', 'max:100'],
+            'currency'         => ['required', 'string', 'max:10'],
+            'timezone'         => ['required', 'string', 'max:100'],
+
+            // --- Step 3: Brand ---
             'brand_name'       => ['required', 'string', 'max:255'],
-            'brand_url'        => ['required', 'string', 'max:255', 'unique:brands,url', 'regex:/^[a-z0-9\-]+$/'],
-            'brand_category'   => ['required', 'string', 'max:100'],
-            'brand_owner_name' => ['nullable', 'string', 'max:255'],
-            'brand_country'    => ['nullable', 'string', 'max:100'],
-            'brand_timezone'   => ['nullable', 'string', 'max:100'],
-            'brand_currency'   => ['nullable', 'string', 'max:10'],
+            'brand_url'        => ['required', 'string', 'max:255', 'unique:brands,brand_url', 'regex:/^[a-z0-9\-]+$/'],
+            'brand_category'   => ['nullable', 'string', 'max:100'],
         ], [
-            'name.required'           => 'Full name is required.',
-            'email.required'          => 'Email address is required.',
-            'email.email'             => 'Please enter a valid email address.',
-            'email.unique'            => 'This email is already registered.',
-            'mobile_number.required'  => 'Mobile number is required.',
-            'password.required'       => 'Password is required.',
-            'password.min'            => 'Password must be at least 8 characters.',
-            'password.confirmed'      => 'Passwords do not match.',
-            'brand_name.required'     => 'Brand name is required.',
-            'brand_url.required'      => 'Brand URL is required.',
-            'brand_url.unique'        => 'This brand URL is already taken.',
-            'brand_url.regex'         => 'Brand URL may only contain lowercase letters, numbers, and hyphens.',
-            'brand_category.required' => 'Brand category is required.',
+            // Account
+            'name.required'            => 'Full name is required.',
+            'email.required'           => 'Email address is required.',
+            'email.email'              => 'Please enter a valid email address.',
+            'email.unique'             => 'This email is already registered.',
+            'mobile_number.required'   => 'Mobile number is required.',
+            'password.required'        => 'Password is required.',
+            'password.min'             => 'Password must be at least 8 characters.',
+            'password.confirmed'       => 'Passwords do not match.',
+            // Workspace
+            'workspace_name.required'  => 'Workspace name is required.',
+            'owner_name.required'      => 'Admin / Owner name is required.',
+            'country.required'         => 'Country is required.',
+            'currency.required'        => 'Currency is required.',
+            'timezone.required'        => 'Timezone is required.',
+            // Brand
+            'brand_name.required'      => 'Brand name is required.',
+            'brand_url.required'       => 'Brand URL is required.',
+            'brand_url.unique'         => 'This brand URL is already taken.',
+            'brand_url.regex'          => 'Brand URL may only contain lowercase letters, numbers, and hyphens.',
         ]);
 
         if ($validator->fails()) {
@@ -122,7 +136,7 @@ class AuthController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1. Create user
+            // 1. Create user account
             $user = User::create([
                 'name'              => $request->name,
                 'email'             => $request->email,
@@ -130,22 +144,38 @@ class AuthController extends Controller
                 'password'          => $request->password,
                 'registration_type' => 'brand',
                 'status'            => 1,
-                'timezone'          => $request->timezone ?? $request->brand_timezone,
-                'country'           => $request->country ?? $request->brand_country,
+                'timezone'          => $request->timezone,
+                'country'           => $request->country,
                 'profile_picture'   => $request->profile_picture,
             ]);
 
-            // 2. Create brand linked to the new user
-            $brand = Brand::create([
+            // 2. Create workspace linked to the user
+            $workspace = Workspace::create([
                 'user_id'    => $user->id,
-                'brand_name' => $request->brand_name,
-                'url'        => $request->brand_url,
-                'category'   => $request->brand_category,
-                'owner_name' => $request->brand_owner_name ?? $request->name,
-                'country'    => $request->brand_country,
-                'timezone'   => $request->brand_timezone,
-                'currency'   => $request->brand_currency,
-                'status'     => 1,
+                'name'       => $request->workspace_name,
+                'owner_name' => $request->owner_name,
+                'country'    => $request->country,
+                'currency'   => $request->currency,
+                'timezone'   => $request->timezone,
+                'status'     => 'active',
+            ]);
+
+            // 3. Resolve category — find by name or create if not found
+            $category = null;
+            if ($request->brand_category) {
+                $category = Category::firstOrCreate(
+                    ['name' => $request->brand_category],
+                    ['status' => 'active']
+                );
+            }
+
+            // 4. Create brand linked to the workspace (and optional category)
+            $brand = Brand::create([
+                'workspace_id' => $workspace->id,
+                'category_id'  => $category?->id,
+                'name'         => $request->brand_name,
+                'brand_url'    => strtolower($request->brand_url),
+                'status'       => 'active',
             ]);
 
             DB::commit();
@@ -158,6 +188,7 @@ class AuthController extends Controller
                 'message' => 'Brand account created successfully.',
                 'data'    => [
                     'user'       => $this->userResource($user),
+                    'workspace'  => $this->workspaceResource($workspace),
                     'brand'      => $this->brandResource($brand),
                     'token'      => $token,
                     'token_type' => 'Bearer',
@@ -227,11 +258,15 @@ class AuthController extends Controller
             'expires_in' => auth('api')->factory()->getTTL() * 60,
         ];
 
-        // If the user is a brand type, also return their first brand
+        // If the user is a brand type, also return their workspace and first brand
         if ($user->registration_type === 'brand') {
-            $brand = Brand::where('user_id', $user->id)->first();
-            if ($brand) {
-                $data['brand'] = $this->brandResource($brand);
+            $workspace = Workspace::where('user_id', $user->id)->first();
+            if ($workspace) {
+                $data['workspace'] = $this->workspaceResource($workspace);
+                $brand = Brand::where('workspace_id', $workspace->id)->first();
+                if ($brand) {
+                    $data['brand'] = $this->brandResource($brand);
+                }
             }
         }
 
@@ -250,7 +285,6 @@ class AuthController extends Controller
         $token = $request->bearerToken();
 
         if ($token) {
-            // Revoke the specific session record
             JwtSession::where('token_hash', hash('sha256', $token))
                 ->update([
                     'is_active'  => 0,
@@ -277,9 +311,13 @@ class AuthController extends Controller
         $data = ['user' => $this->userResource($user)];
 
         if ($user->registration_type === 'brand') {
-            $brand = Brand::where('user_id', $user->id)->first();
-            if ($brand) {
-                $data['brand'] = $this->brandResource($brand);
+            $workspace = Workspace::where('user_id', $user->id)->first();
+            if ($workspace) {
+                $data['workspace'] = $this->workspaceResource($workspace);
+                $brand = Brand::where('workspace_id', $workspace->id)->first();
+                if ($brand) {
+                    $data['brand'] = $this->brandResource($brand);
+                }
             }
         }
 
@@ -298,13 +336,11 @@ class AuthController extends Controller
             $oldToken = $request->bearerToken();
             $newToken = auth('api')->refresh();
 
-            // Revoke old session
             if ($oldToken) {
                 JwtSession::where('token_hash', hash('sha256', $oldToken))
                     ->update(['is_active' => 0, 'revoked_at' => now()]);
             }
 
-            // Store new session
             $user = auth('api')->user();
             $this->storeSession($user, $newToken, $request);
 
@@ -343,7 +379,7 @@ class AuthController extends Controller
         }
 
         $slug      = strtolower($request->url);
-        $available = ! Brand::where('url', $slug)->exists();
+        $available = ! Brand::where('brand_url', $slug)->exists();
 
         return response()->json([
             'success'   => true,
@@ -357,9 +393,6 @@ class AuthController extends Controller
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Store the JWT token in jwt_sessions for multi-device tracking.
-     */
     private function storeSession(User $user, string $token, Request $request): void
     {
         $ttlMinutes = auth('api')->factory()->getTTL();
@@ -393,20 +426,31 @@ class AuthController extends Controller
         ];
     }
 
+    private function workspaceResource(Workspace $workspace): array
+    {
+        return [
+            'id'         => $workspace->id,
+            'name'       => $workspace->name,
+            'owner_name' => $workspace->owner_name,
+            'country'    => $workspace->country,
+            'currency'   => $workspace->currency,
+            'timezone'   => $workspace->timezone,
+            'status'     => $workspace->status,
+            'created_at' => $workspace->created_at,
+        ];
+    }
+
     private function brandResource(Brand $brand): array
     {
         return [
-            'id'         => $brand->id,
-            'brand_name' => $brand->brand_name,
-            'url'        => 'card.vu/' . $brand->url,
-            'slug'       => $brand->url,
-            'category'   => $brand->category,
-            'owner_name' => $brand->owner_name,
-            'country'    => $brand->country,
-            'timezone'   => $brand->timezone,
-            'currency'   => $brand->currency,
-            'status'     => $brand->status,
-            'created_at' => $brand->created_at,
+            'id'           => $brand->id,
+            'workspace_id' => $brand->workspace_id,
+            'name'         => $brand->name,
+            'url'          => 'card.vu/' . $brand->brand_url,
+            'slug'         => $brand->brand_url,
+            'category'     => $brand->category?->name,
+            'status'       => $brand->status,
+            'created_at'   => $brand->created_at,
         ];
     }
 }

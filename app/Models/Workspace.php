@@ -5,18 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Brand extends Model
+class Workspace extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'workspace_id',
-        'category_id',
+        'user_id',
         'name',
-        'brand_url',
-        'logo',
-        'description',
+        'owner_name',
+        'country',
+        'currency',
+        'timezone',
         'status',
     ];
 
@@ -24,13 +25,13 @@ class Brand extends Model
     // Relationships
     // -------------------------------------------------------------------------
 
-    public function workspace(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Workspace::class);
+        return $this->belongsTo(User::class);
     }
 
-    public function category(): BelongsTo
+    public function brands(): HasMany
     {
-        return $this->belongsTo(Category::class);
+        return $this->hasMany(Brand::class);
     }
 }
