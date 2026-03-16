@@ -41,7 +41,7 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Validation failed.',
                 'errors'  => $validator->errors(),
             ], 422);
@@ -70,7 +70,7 @@ class AuthController extends Controller
             DB::commit();
 
             return response()->json([
-                'success' => true,
+                'status' => true,
                 'message' => 'Professional account created successfully.',
                 'data'    => [
                     'token'      => $token,
@@ -83,7 +83,7 @@ class AuthController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Registration failed. Please try again.',
                 'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
@@ -143,7 +143,7 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Validation failed.',
                 'errors'  => $validator->errors(),
             ], 422);
@@ -200,7 +200,7 @@ class AuthController extends Controller
             $this->storeSession($user, $token, $request);
 
             return response()->json([
-                'success' => true,
+                'status' => true,
                 'message' => 'Brand account created successfully.',
                 'data'    => [
                     'token'      => $token,
@@ -213,7 +213,7 @@ class AuthController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Registration failed. Please try again.',
                 'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
@@ -236,7 +236,7 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Validation failed.',
                 'errors'  => $validator->errors(),
             ], 422);
@@ -246,7 +246,7 @@ class AuthController extends Controller
 
         if (! $token = auth('api')->attempt($credentials)) {
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Invalid email or password.',
             ], 401);
         }
@@ -257,7 +257,7 @@ class AuthController extends Controller
         if (! $user->status) {
             auth('api')->logout();
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Your account is inactive. Please contact support.',
             ], 403);
         }
@@ -265,7 +265,7 @@ class AuthController extends Controller
         $this->storeSession($user, $token, $request);
 
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'Login successful.',
             'data'    => [
                 'token'      => $token,
@@ -293,7 +293,7 @@ class AuthController extends Controller
         auth('api')->logout();
 
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'Logged out successfully.',
         ]);
     }
@@ -320,7 +320,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'success' => true,
+            'status' => true,
             'message' => 'User retrieved successfully.',
             'data'    => $data,
         ]);
@@ -352,7 +352,7 @@ class AuthController extends Controller
             DB::commit();
 
             return response()->json([
-                'success' => true,
+                'status' => true,
                 'message' => 'Token refreshed successfully.',
                 'data'    => [
                     'token'      => $newToken,
@@ -365,7 +365,7 @@ class AuthController extends Controller
             DB::rollBack();
 
             return response()->json([
-                'success' => false,
+                'status' => false,
                 'message' => 'Token refresh failed.',
                 'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 401);
@@ -386,7 +386,7 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'success'   => false,
+                'status'   => false,
                 'available' => false,
                 'message'   => $validator->errors()->first('url'),
             ], 422);
@@ -396,7 +396,7 @@ class AuthController extends Controller
         $available = ! Brand::where('brand_url', $slug)->exists();
 
         return response()->json([
-            'success'   => true,
+            'status'   => true,
             'available' => $available,
             'url'       => 'card.vu/' . $slug,
             'message'   => $available ? 'URL is available.' : 'This URL is already taken.',
