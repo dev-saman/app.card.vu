@@ -381,7 +381,7 @@ class AuthController extends Controller
     // -------------------------------------------------------------------------
     // GET /api/auth/check-url?url=my-brand  (public)
     // -------------------------------------------------------------------------
-    public function checkBrandUrl(Request $request): JsonResponse
+    public function checkBrandUrl(Request $request): JsonResponse 
     {
         $validator = Validator::make($request->all(), [
             'url' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9\-]+$/'],
