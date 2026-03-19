@@ -39,28 +39,32 @@ jobs:
             "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
             "mkdir -p /home/stechlocal/web/api.card.vu/public_html"
 
-      - name: Clean target folder but keep runtime files
+      - name: Sync only changed files via rsync
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" -o StrictHostKeyChecking=yes \
-            "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
-            "find /home/stechlocal/web/api.card.vu/public_html -mindepth 1 -maxdepth 1 \
-            ! -name '.env' \
-            ! -name 'vendor' \
-            ! -name 'storage' \
-            ! -name '.well-known' \
-            -exec rm -rf {} +"
-
-      - name: Upload full Laravel project
-        run: |
-          tar -czf - . | ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" -o StrictHostKeyChecking=yes \
-            "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
-            "tar -xzf - -C /home/stechlocal/web/api.card.vu/public_html"
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='storage' \
+            --exclude='.env' \
+            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.HETZNER_PORT }} -o StrictHostKeyChecking=yes" \
+            ./ ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:/home/stechlocal/web/api.card.vu/public_html
 
       - name: Set permissions
         run: |
           ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" -o StrictHostKeyChecking=yes \
             "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
             "chmod -R 775 /home/stechlocal/web/api.card.vu/public_html/storage /home/stechlocal/web/api.card.vu/public_html/bootstrap/cache || true"
+
+      - name: Optimize Laravel
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" \
+          "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" << 'EOF'
+            cd /home/stechlocal/web/api.card.vu/public_html
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+          EOF
 
       - name: Verify uploaded files
         run: |
