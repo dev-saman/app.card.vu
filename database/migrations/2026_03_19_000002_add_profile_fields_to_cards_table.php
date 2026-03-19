@@ -15,8 +15,8 @@ return new class extends Migration
             // Foreign key for user
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade')->after('id');
 
-            // Foreign keys for template and category
-            $table->foreignId('template_id')->nullable()->constrained('templates')->onDelete('set null')->after('workspace_id');
+            // Foreign keys for category (template FK added after templates table is created)
+            $table->unsignedBigInteger('template_id')->nullable()->after('workspace_id');
             $table->foreignId('category_id')->nullable()->constrained('categories')->onDelete('set null')->after('template_id');
 
             // Custom card URL / username slug (e.g. your-card-url.card.vu)

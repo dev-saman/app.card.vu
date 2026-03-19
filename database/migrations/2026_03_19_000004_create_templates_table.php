@@ -21,6 +21,11 @@ return new class extends Migration
             $table->tinyInteger('is_active')->default(1);
             $table->timestamps();
         });
+
+        // Now that templates table exists, add the foreign key constraint on cards.template_id
+        Schema::table('cards', function (Blueprint $table) {
+            $table->foreign('template_id')->references('id')->on('templates')->onDelete('set null');
+        });
     }
 
     /**
@@ -28,6 +33,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop the foreign key constraint before dropping the templates table
+        Schema::table('cards', function (Blueprint $table) {
+            $table->dropForeign(['template_id']);
+        });
+
         Schema::dropIfExists('templates');
     }
 };
