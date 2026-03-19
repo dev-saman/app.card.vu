@@ -38,10 +38,10 @@ class Card extends Model
     }
 
     /**
-     * Get the media links associated with the card.
+     * Get the details (contact info, social links, working hours) associated with the card.
      */
-    public function mediaLinks(): HasOne
+    public function details(): HasOne
     {
-        return $this->hasOne(CardMediaLink::class);
+        return $this->hasOne(CardDetail::class);
     }
 }
