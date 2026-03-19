@@ -13,8 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
-
-
 class AuthController extends Controller
 {
     // -------------------------------------------------------------------------
@@ -81,7 +79,6 @@ class AuthController extends Controller
                     'expires_in' => auth('api')->factory()->getTTL() * 60,
                 ],
             ], 201);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -211,7 +208,6 @@ class AuthController extends Controller
                     'expires_in' => auth('api')->factory()->getTTL() * 60,
                 ],
             ], 201);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -245,20 +241,20 @@ class AuthController extends Controller
             ], 422);
         }
 
-        try{
+        try {
 
             $credentials = $request->only('email', 'password');
-    
+
             if (! $token = auth('api')->attempt($credentials)) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Invalid email or password.',
                 ], 401);
             }
-    
+
             /** @var User $user */
             $user = auth('api')->user();
-    
+
             if (! $user->status) {
                 auth('api')->logout();
                 return response()->json([
@@ -266,9 +262,9 @@ class AuthController extends Controller
                     'message' => 'Your account is inactive. Please contact support.',
                 ], 403);
             }
-    
+
             $this->storeSession($user, $token, $request);
-    
+
             return response()->json([
                 'status' => true,
                 'message' => 'Login successful.',
@@ -278,7 +274,7 @@ class AuthController extends Controller
                     'expires_in' => auth('api')->factory()->getTTL() * 60,
                 ],
             ]);
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
                 'message' =>  $e->getMessage(),
@@ -371,7 +367,6 @@ class AuthController extends Controller
                     'expires_in' => auth('api')->factory()->getTTL() * 60,
                 ],
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 
