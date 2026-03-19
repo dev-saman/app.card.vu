@@ -242,37 +242,45 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $credentials = $request->only('email', 'password');
+        try{
 
-        if (! $token = auth('api')->attempt($credentials)) {
+            $credentials = $request->only('email', 'password');
+    
+            if (! $token = auth('api')->attempt($credentials)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid email or password.',
+                ], 401);
+            }
+    
+            /** @var User $user */
+            $user = auth('api')->user();
+    
+            if (! $user->status) {
+                auth('api')->logout();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your account is inactive. Please contact support.',
+                ], 403);
+            }
+    
+            $this->storeSession($user, $token, $request);
+    
+            return response()->json([
+                'status' => true,
+                'message' => 'Login successful.',
+                'data'    => [
+                    'token'      => $token,
+                    'token_type' => 'Bearer',
+                    'expires_in' => auth('api')->factory()->getTTL() * 60,
+                ],
+            ]);
+        } catch(\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'Invalid email or password.',
-            ], 401);
+                'message' =>  $e->getMessage(),
+            ]);
         }
-
-        /** @var User $user */
-        $user = auth('api')->user();
-
-        if (! $user->status) {
-            auth('api')->logout();
-            return response()->json([
-                'status' => false,
-                'message' => 'Your account is inactive. Please contact support.',
-            ], 403);
-        }
-
-        $this->storeSession($user, $token, $request);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Login successful.',
-            'data'    => [
-                'token'      => $token,
-                'token_type' => 'Bearer',
-                'expires_in' => auth('api')->factory()->getTTL() * 60,
-            ],
-        ]);
     }
 
     // -------------------------------------------------------------------------
