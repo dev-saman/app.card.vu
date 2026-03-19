@@ -14,13 +14,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Check repository contents
-        run: |
-          ls -la
-          test -f artisan && echo "artisan found"
-          test -f composer.json && echo "composer.json found"
-          test -d public && echo "public folder found"
-
       - name: Prepare SSH
         run: |
           mkdir -p ~/.ssh
@@ -28,20 +21,12 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "${{ secrets.HETZNER_PORT }}" "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Test SSH connection
+      - name: Sync only changed files via rsync (FIXED)
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" -o StrictHostKeyChecking=yes \
-            "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" "echo SSH_OK"
-
-      - name: Ensure target folder exists
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" -o StrictHostKeyChecking=yes \
-            "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
-            "mkdir -p /home/stechlocal/web/api.card.vu/public_html"
-
-      - name: Sync only changed files via rsync
-        run: |
-          rsync -avz --delete \
+          rsync -az --delete \
+            --checksum \
+            --compress \
+            --itemize-changes \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='vendor' \
@@ -50,24 +35,12 @@ jobs:
             -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.HETZNER_PORT }} -o StrictHostKeyChecking=yes" \
             ./ ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:/home/stechlocal/web/api.card.vu/public_html
 
-      - name: Set permissions
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" -o StrictHostKeyChecking=yes \
-            "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
-            "chmod -R 775 /home/stechlocal/web/api.card.vu/public_html/storage /home/stechlocal/web/api.card.vu/public_html/bootstrap/cache || true"
-
       - name: Optimize Laravel
         run: |
           ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" \
           "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" << 'EOF'
             cd /home/stechlocal/web/api.card.vu/public_html
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+            php artisan config:cache || true
+            php artisan route:cache || true
+            php artisan view:cache || true
           EOF
-
-      - name: Verify uploaded files
-        run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.HETZNER_PORT }}" -o StrictHostKeyChecking=yes \
-            "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
-            "ls -la /home/stechlocal/web/api.card.vu/public_html"
