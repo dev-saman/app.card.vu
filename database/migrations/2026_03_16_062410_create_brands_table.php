@@ -13,13 +13,26 @@ return new class extends Migration
     {
         Schema::create('brands', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('workspace_id')->constrained()->onDelete('cascade');
-            $table->foreignId('category_id')->constrained()->onDelete('cascade');
-            $table->string('name');
-            $table->string('brand_url')->unique();
-            $table->string('logo')->nullable();
-            $table->text('description')->nullable();
-            $table->string('status')->default('active');
+
+            // Foreign key — owner user
+            $table->foreignId('user_id')
+                  ->constrained('users')
+                  ->onDelete('cascade');
+
+            // Brand identity
+            $table->string('brand_name');
+            $table->string('url')->unique();          // slug e.g. 'riders-rally' → card.vu/riders-rally
+            $table->string('category', 100)->nullable();
+
+            // Operational details
+            $table->string('owner_name');
+            $table->string('country', 100)->nullable();
+            $table->string('timezone', 100)->nullable(); // IANA e.g. 'Asia/Kolkata'
+            $table->string('currency', 10)->nullable();  // ISO 4217 e.g. 'INR', 'USD'
+
+            // Status: 1 = active, 0 = inactive
+            $table->tinyInteger('status')->default(1);
+
             $table->timestamps();
         });
     }
