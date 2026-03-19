@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CardDetail extends Model
+class CardContact extends Model
 {
     protected $fillable = [
         'card_id',
@@ -42,7 +42,7 @@ class CardDetail extends Model
     ];
 
     /**
-     * Get the card that owns these details.
+     * Get the card that owns these contacts.
      */
     public function card(): BelongsTo
     {

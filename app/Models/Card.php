@@ -38,10 +38,10 @@ class Card extends Model
     }
 
     /**
-     * Get the details (contact info, social links, working hours) associated with the card.
+     * Get the contact details (contact info, social links, working hours) associated with the card.
      */
-    public function details(): HasOne
+    public function contact(): HasOne
     {
-        return $this->hasOne(CardDetail::class);
+        return $this->hasOne(CardContact::class);
     }
 }
