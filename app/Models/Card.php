@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Card extends Model
 {
     protected $fillable = [
+        'user_id',
         'workspace_id',
         'template_id',
         'category_id',

@@ -12,6 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('cards', function (Blueprint $table) {
+            // Foreign key for user
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade')->after('id');
+
             // Foreign keys for template and category
             $table->foreignId('template_id')->nullable()->constrained('templates')->onDelete('set null')->after('workspace_id');
             $table->foreignId('category_id')->nullable()->constrained('categories')->onDelete('set null')->after('template_id');
@@ -39,7 +42,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('cards', function (Blueprint $table) {
+            $table->dropForeign(['user_id']);
             $table->dropColumn([
+                'user_id',
                 'template_id',
                 'category_id',
                 'card_url',
