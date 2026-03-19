@@ -33,6 +33,9 @@ return new class extends Migration
 
             // Google Business Profile URL or Place ID for reviews sync
             $table->string('google_business_profile')->nullable()->after('highlights');
+
+            // Tracks how many setup steps the user has completed for this card
+            $table->integer('step_count')->default(0)->after('google_business_profile');
         });
     }
 
@@ -52,6 +55,7 @@ return new class extends Migration
                 'specializations',
                 'highlights',
                 'google_business_profile',
+                'step_count',
             ]);
         });
     }

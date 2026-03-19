@@ -22,6 +22,7 @@ class Card extends Model
         'specializations',
         'highlights',
         'google_business_profile',
+        'step_count',
         'profile_image',
         'qr_code',
         'status',
