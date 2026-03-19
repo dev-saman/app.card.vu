@@ -61,7 +61,7 @@ class AuthController extends Controller
                 'timezone'          => $request->timezone,
                 'country'           => $request->country,
                 'profile_picture'   => $request->profile_picture,
-                'registration_step' => 2, // step 1 type, step 2 create accoun, step 3 google connect
+                'registration_step' => 2, // step 1 type, step 2 create account, step 3 google connect
             ]);
 
             // 2. Issue JWT and store session
