@@ -19,23 +19,23 @@ use Illuminate\Http\JsonResponse;
 class RegisterController extends Controller
 {
     // -------------------------------------------------------------------------
-    // Step 1: Select user type (working_professional / service_professional)
+    // Step 1: Select registration type (working_professional / service_professional)
     // -------------------------------------------------------------------------
 
     public function init(RegisterInitRequest $request): JsonResponse
     {
         // Create a new registration session with a unique token
         $session = RegistrationSession::create([
-            'token'      => Str::uuid()->toString(),
-            'user_type'  => $request->user_type,
-            'expires_at' => now()->addHours(2),
+            'token'             => Str::uuid()->toString(),
+            'registration_type' => $request->user_type,
+            'expires_at'        => now()->addHours(2),
         ]);
 
         return response()->json([
             'status'             => true,
             'message'            => 'Card type selected. Please proceed to account setup.',
             'registration_token' => $session->token,
-            'user_type'          => $session->user_type,
+            'registration_type'  => $session->registration_type,
         ]);
     }
 
@@ -116,7 +116,7 @@ class RegisterController extends Controller
         }
 
         // Check all required data is present
-        if (!$session->full_name || !$session->mobile_number || !$session->user_type) {
+        if (!$session->full_name || !$session->mobile_number || !$session->registration_type) {
             return response()->json([
                 'status'  => false,
                 'message' => 'Incomplete registration data. Please start again.',
@@ -128,8 +128,7 @@ class RegisterController extends Controller
             'name'              => $session->full_name,
             'email'             => null,
             'password'          => bcrypt(Str::random(16)), // random password, login via OTP
-            'registration_type' => 'professional',
-            'user_type'         => $session->user_type,
+            'registration_type' => $session->registration_type,
             'mobile_number'     => $session->mobile_number,
             'status'            => 1,
         ]);

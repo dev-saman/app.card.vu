@@ -8,7 +8,7 @@ class RegistrationSession extends Model
 {
     protected $fillable = [
         'token',
-        'user_type',
+        'registration_type',
         'full_name',
         'mobile_number',
         'country_code',

@@ -17,8 +17,8 @@ return new class extends Migration
             // Unique token to track the registration session across steps
             $table->string('token')->unique();
 
-            // Step 1: user type selection
-            $table->enum('user_type', ['working_professional', 'service_professional'])->nullable();
+            // Step 1: registration type selection
+            $table->enum('registration_type', ['working_professional', 'service_professional'])->nullable();
 
             // Step 2: account details
             $table->string('full_name')->nullable();
