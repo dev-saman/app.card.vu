@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\RegisterController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,9 +24,15 @@ Route::get('/health', function () {
 // Auth routes (public)
 // -------------------------------------------------------------------------
 Route::prefix('auth')->group(function () {
-    // Registration
+    // Legacy Registration
     Route::post('/register/professional', [AuthController::class, 'registerProfessional']);
     Route::post('/register/brand',        [AuthController::class, 'registerBrand']);
+
+    // New 3-step Registration
+    Route::post('/register/init',       [RegisterController::class, 'init']);
+    Route::post('/register/account',    [RegisterController::class, 'account']);
+    Route::post('/register/verify',     [RegisterController::class, 'verify']);
+    Route::post('/register/resend-otp', [RegisterController::class, 'resendOtp']);
 
     // Login
     Route::post('/login', [AuthController::class, 'login']);
