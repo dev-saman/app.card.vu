@@ -28,6 +28,7 @@ class RegisterController extends Controller
         $session = RegistrationSession::create([
             'token'             => Str::uuid()->toString(),
             'registration_type' => $request->user_type,
+            'current_step'      => 1, // Step 1 completed: type selected
             'expires_at'        => now()->addHours(2),
         ]);
 
@@ -58,7 +59,7 @@ class RegisterController extends Controller
         // Generate a 6-digit OTP
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        // Update session with account details and OTP
+        // Update session with account details, OTP, and advance step
         $session->update([
             'full_name'      => $request->full_name,
             'country_code'   => $request->country_code,
@@ -66,6 +67,7 @@ class RegisterController extends Controller
             'otp'            => $otp,
             'otp_expires_at' => now()->addMinutes(10),
             'otp_verified'   => 0,
+            'current_step'   => 2, // Step 2 completed: account details submitted
         ]);
 
         // TODO: Send OTP via WhatsApp API
@@ -149,8 +151,11 @@ class RegisterController extends Controller
             'step_count'   => 1,
         ]);
 
-        // Mark OTP as verified and clean up session
-        $session->update(['otp_verified' => 1]);
+        // Mark OTP as verified, advance to step 3, then clean up session
+        $session->update([
+            'otp_verified' => 1,
+            'current_step' => 3, // Step 3 completed: OTP verified, registration done
+        ]);
         $session->delete();
 
         // Generate JWT token and log session

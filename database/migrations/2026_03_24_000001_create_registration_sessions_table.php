@@ -17,6 +17,9 @@ return new class extends Migration
             // Unique token to track the registration session across steps
             $table->string('token')->unique();
 
+            // Tracks which step the user last completed (1=type selected, 2=account details submitted, 3=otp verified)
+            $table->tinyInteger('current_step')->default(1);
+
             // Step 1: registration type selection
             $table->enum('registration_type', ['working_professional', 'service_professional'])->nullable();
 
