@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginSendOtpRequest;
+use App\Http\Requests\LoginVerifyOtpRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\JwtSession;
+use App\Models\LoginOtp;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
@@ -280,6 +283,133 @@ class AuthController extends Controller
                 'message' =>  $e->getMessage(),
             ]);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /api/auth/login/send-otp  (public)
+    // Send a 6-digit OTP to the user's WhatsApp number for login
+    // -------------------------------------------------------------------------
+    public function sendLoginOtp(LoginSendOtpRequest $request): JsonResponse
+    {
+        $fullMobile = $request->country_code . $request->mobile_number;
+
+        // Check if the mobile number is registered
+        $user = User::where('mobile_number', $fullMobile)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'No account found with this mobile number.',
+            ], 404);
+        }
+
+        if (!$user->status) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Your account is inactive. Please contact support.',
+            ], 403);
+        }
+
+        // Invalidate any existing unused OTPs for this number
+        LoginOtp::where('mobile_number', $fullMobile)
+            ->where('is_used', 0)
+            ->update(['is_used' => 1]);
+
+        // Generate a new 6-digit OTP
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        LoginOtp::create([
+            'mobile_number' => $fullMobile,
+            'otp'           => $otp,
+            'expires_at'    => now()->addMinutes(10),
+            'is_used'       => 0,
+        ]);
+
+        // TODO: Send OTP via WhatsApp API
+        \Illuminate\Support\Facades\Log::info('Login OTP for ' . $fullMobile . ': ' . $otp);
+
+        // Mask the mobile number for the response
+        $len = strlen($request->mobile_number);
+        $masked = substr($request->mobile_number, 0, 2)
+            . str_repeat('*', max(0, $len - 4))
+            . substr($request->mobile_number, -2);
+
+        return response()->json([
+            'status'         => true,
+            'message'        => 'OTP sent to your WhatsApp number.',
+            'masked_number'  => $masked,
+            'otp_expires_in' => 600,
+        ]);
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /api/auth/login/verify-otp  (public)
+    // Verify OTP and return JWT token
+    // -------------------------------------------------------------------------
+    public function verifyLoginOtp(LoginVerifyOtpRequest $request): JsonResponse
+    {
+        $fullMobile = $request->country_code . $request->mobile_number;
+
+        // Find the latest unused OTP for this number
+        $loginOtp = LoginOtp::where('mobile_number', $fullMobile)
+            ->where('is_used', 0)
+            ->latest()
+            ->first();
+
+        if (!$loginOtp) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'No OTP found. Please request a new one.',
+            ], 422);
+        }
+
+        if ($loginOtp->isExpired()) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'OTP has expired. Please request a new one.',
+            ], 422);
+        }
+
+        if ($loginOtp->otp !== $request->otp) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Invalid OTP. Please try again.',
+            ], 422);
+        }
+
+        // Mark OTP as used
+        $loginOtp->update(['is_used' => 1]);
+
+        // Find the user
+        $user = User::where('mobile_number', $fullMobile)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Account not found.',
+            ], 404);
+        }
+
+        if (!$user->status) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Your account is inactive. Please contact support.',
+            ], 403);
+        }
+
+        // Issue JWT and store session
+        $token = auth('api')->login($user);
+        $this->storeSession($user, $token, $request);
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Login successful.',
+            'data'    => [
+                'token'      => $token,
+                'token_type' => 'Bearer',
+                'expires_in' => auth('api')->factory()->getTTL() * 60,
+            ],
+        ]);
     }
 
     // -------------------------------------------------------------------------

@@ -34,8 +34,12 @@ Route::prefix('auth')->group(function () {
     Route::post('/register/verify',     [RegisterController::class, 'verify']);
     Route::post('/register/resend-otp', [RegisterController::class, 'resendOtp']);
 
-    // Login
+    // Login via email + password
     Route::post('/login', [AuthController::class, 'login']);
+
+    // Login via mobile number + OTP (WhatsApp)
+    Route::post('/login/send-otp',   [AuthController::class, 'sendLoginOtp']);
+    Route::post('/login/verify-otp', [AuthController::class, 'verifyLoginOtp']);
 
     // Brand URL availability check
     Route::get('/check-url', [AuthController::class, 'checkBrandUrl']);
